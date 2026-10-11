@@ -7,9 +7,8 @@ MinecraftLoadAndCheck::MinecraftLoadAndCheck(MinecraftInstance* inst, Net::Mode 
 
 void MinecraftLoadAndCheck::executeTask()
 {
-    // add offline metadata load task
-    auto* components = m_inst->getPackProfile();
     if (m_netmode == Net::Mode::Online && m_inst->settings()->get("UseLatestMinecraftVersion").toBool()) {
+        auto* components = m_inst->getPackProfile();
         auto releaseType = m_inst->settings()->get("UseLatestMinecraftVersionType").toString();
         if (components->updateLatestMinecraft(releaseType == "release") && APPLICATION->settings()->get("AutomaticJavaSwitch").toBool() &&
             m_inst->settings()->get("AutomaticJava").toBool() && m_inst->settings()->get("OverrideJavaLocation").toBool()) {
@@ -17,20 +16,55 @@ void MinecraftLoadAndCheck::executeTask()
             m_inst->settings()->set("JavaPath", "");
         }
     }
-    if (auto result = components->reload(m_netmode); !result) {
+
+    reloadComponents(m_netmode);
+}
+
+void MinecraftLoadAndCheck::reloadComponents(Net::Mode netmode)
+{
+    if (auto result = m_inst->getPackProfile()->reload(netmode, &m_task); !result) {
         emitFailed(result.error());
         return;
     }
-    m_task = components->getCurrentTask();
 
     if (!m_task) {
         emitSucceeded();
         return;
     }
-    connect(m_task.get(), &Task::succeeded, this, &MinecraftLoadAndCheck::emitSucceeded);
-    connect(m_task.get(), &Task::failed, this, &MinecraftLoadAndCheck::emitFailed);
-    connect(m_task.get(), &Task::aborted, this, &MinecraftLoadAndCheck::emitAborted);
+    connect(m_task.get(), &Task::finished, this, &MinecraftLoadAndCheck::onTaskFinished);
     propagateFromOther(m_task.get());
+    if (m_task->isFinished()) {
+        onTaskFinished();
+    }
+}
+
+void MinecraftLoadAndCheck::onTaskFinished()
+{
+    if (isFinished() || !m_task) {
+        return;
+    }
+
+    switch (m_task->getState()) {
+        case Task::State::Succeeded:
+            emitSucceeded();
+            break;
+        case Task::State::AbortedByUser:
+            emitAborted();
+            break;
+        case Task::State::Failed:
+            if (m_netmode == Net::Mode::Offline) {
+                m_task.reset();
+                m_netmode = Net::Mode::Online;
+                setDetails(tr("Offline metadata is unavailable. Retrying metadata resolution online."));
+                reloadComponents(m_netmode);
+                break;
+            }
+            emitFailed(m_task->failReason());
+            break;
+        case Task::State::Inactive:
+        case Task::State::Running:
+            break;
+    }
 }
 
 bool MinecraftLoadAndCheck::canAbort() const

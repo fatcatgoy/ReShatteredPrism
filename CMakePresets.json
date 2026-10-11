@@ -128,6 +128,17 @@
                 "rhs": "Windows"
             },
             "configurePreset": "windows_msvc"
+        },
+        {
+            "name": "windows_msvc_release",
+            "displayName": "Windows (MSVC Release)",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "configurePreset": "windows_msvc",
+            "configuration": "Release"
         }
     ],
     "testPresets": [
@@ -211,6 +222,17 @@
                 "rhs": "Windows"
             },
             "configurePreset": "windows_msvc"
+        },
+        {
+            "name": "windows_msvc_release",
+            "displayName": "Windows (MSVC Release)",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "configurePreset": "windows_msvc",
+            "configuration": "Release"
         }
     ]
 }

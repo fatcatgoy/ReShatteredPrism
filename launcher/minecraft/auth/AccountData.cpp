@@ -295,6 +295,9 @@ bool AccountData::resumeStateFromV3(QJsonObject data)
         qWarning() << "Failed to parse account data: type is not recognized.";
         return false;
     }
+    if (type == AccountType::Offline) {
+        accountState = AccountState::Offline;
+    }
 
     if (type == AccountType::MSA) {
         auto clientIDV = data.value("msa-client-id");

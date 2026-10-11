@@ -327,11 +327,14 @@ Result<> PackProfile::load()
     return {};
 }
 
-Result<> PackProfile::reload(Net::Mode netmode)
+Result<> PackProfile::reload(Net::Mode netmode, Task::Ptr* updateTask)
 {
     // Do not reload when the update/resolve task is running. It is in control.
     if (d->m_updateTask) {
         if (d->m_updateTask->netMode() == netmode) {
+            if (updateTask) {
+                *updateTask = d->m_updateTask;
+            }
             return {};
         }
 
@@ -351,7 +354,10 @@ Result<> PackProfile::reload(Net::Mode netmode)
     if (auto result = load(); !result) {
         return result;
     }
-    resolve(netmode);
+    auto task = resolve(netmode);
+    if (updateTask) {
+        *updateTask = std::move(task);
+    }
     return {};
 }
 
@@ -360,14 +366,15 @@ Task::Ptr PackProfile::getCurrentTask()
     return d->m_updateTask;
 }
 
-void PackProfile::resolve(Net::Mode netmode)
+Task::Ptr PackProfile::resolve(Net::Mode netmode)
 {
-    auto updateTask = new ComponentUpdateTask(ComponentUpdateTask::Mode::Resolution, netmode, this);
-    d->m_updateTask.reset(updateTask);
-    connect(updateTask, &ComponentUpdateTask::succeeded, this, &PackProfile::updateSucceeded);
-    connect(updateTask, &ComponentUpdateTask::failed, this, &PackProfile::updateFailed);
-    connect(updateTask, &ComponentUpdateTask::aborted, this, [this] { updateFailed(tr("Aborted")); });
-    d->m_updateTask->start();
+    auto updateTask = makeShared<ComponentUpdateTask>(ComponentUpdateTask::Mode::Resolution, netmode, this);
+    d->m_updateTask = updateTask;
+    connect(updateTask.get(), &ComponentUpdateTask::succeeded, this, &PackProfile::updateSucceeded);
+    connect(updateTask.get(), &ComponentUpdateTask::failed, this, &PackProfile::updateFailed);
+    connect(updateTask.get(), &ComponentUpdateTask::aborted, this, [this] { updateFailed(tr("Aborted")); });
+    updateTask->start();
+    return updateTask;
 }
 
 void PackProfile::updateSucceeded()

@@ -32,6 +32,9 @@ class MinecraftLoadAndCheck : public Task {
     bool abort() override;
 
    private:
+    void reloadComponents(Net::Mode netmode);
+    void onTaskFinished();
+
     MinecraftInstance* m_inst = nullptr;
     Task::Ptr m_task;
     Net::Mode m_netmode;

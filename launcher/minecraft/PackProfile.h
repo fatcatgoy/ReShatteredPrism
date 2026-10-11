@@ -103,10 +103,10 @@ class PackProfile : public QAbstractListModel {
     bool revertToBase(int index);
 
     /// reload the list, reload all components, resolve dependencies
-    Result<> reload(Net::Mode netmode);
+    Result<> reload(Net::Mode netmode, Task::Ptr* updateTask = nullptr);
 
     // reload all components, resolve dependencies
-    void resolve(Net::Mode netmode);
+    Task::Ptr resolve(Net::Mode netmode);
 
     /// get current running task...
     Task::Ptr getCurrentTask();

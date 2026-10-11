@@ -592,6 +592,16 @@ bool AccountList::anyAccountIsValid()
     return false;
 }
 
+bool AccountList::hasOfflineAccount() const
+{
+    for (const auto& account : m_accounts) {
+        if (account->accountType() == AccountType::Offline && account->hasProfile()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void AccountList::fillQueue()
 {
     if (m_defaultAccount && m_defaultAccount->shouldRefresh()) {
